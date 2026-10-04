@@ -1,0 +1,1386 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AgentRelay Hosted API",
+    "version": "1.0.0",
+    "description": "Public hosted AgentRelay API. API versioning is independent from SDK/package SemVer."
+  },
+  "x-agentforge-api-version": "v1",
+  "servers": [
+    {
+      "url": "https://relay.web-tasarimci.com",
+      "description": "AgentForge-managed AgentRelay service"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "service",
+      "description": "Hosted service metadata"
+    },
+    {
+      "name": "agents",
+      "description": "Workspace-scoped agent registry reads"
+    },
+    {
+      "name": "messages",
+      "description": "Outbound Telegram deliveries"
+    },
+    {
+      "name": "inbox",
+      "description": "Inbound event reads and replies"
+    },
+    {
+      "name": "files",
+      "description": "Binary upload/download"
+    }
+  ],
+  "paths": {
+    "/v1/service": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "operationId": "getServiceInfo",
+        "x-agentforge-metering-action": "health_status",
+        "summary": "Get hosted API metadata and compatibility information",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ServiceInfo"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "operationId": "listAgents",
+        "x-agentforge-metering-action": "auth_account",
+        "summary": "List agents visible in a workspace",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace agents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/messages": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "operationId": "sendAgentMessage",
+        "x-agentforge-metering-action": "outbound_text",
+        "summary": "Send one logical outbound text delivery",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Logical delivery accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/QuotaOrRateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/DeliveryFailed"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/files": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "sendAgentFile",
+        "x-agentforge-metering-action": "outbound_file",
+        "summary": "Send one logical outbound document or photo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SendFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Logical delivery accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/QuotaOrRateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/DeliveryFailed"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/inbox": {
+      "get": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "listInboxEvents",
+        "x-agentforge-metering-action": "read_inbox",
+        "summary": "List inbound events for an agent",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated inbox events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/inbox/{eventId}": {
+      "get": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "getInboxEvent",
+        "x-agentforge-metering-action": "read_inbox",
+        "summary": "Read one inbound event",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/inbox/{eventId}/reply": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "replyToInboxEvent",
+        "x-agentforge-metering-action": "outbound_text",
+        "summary": "Reply to an inbound event with text",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Reply accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/QuotaOrRateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/DeliveryFailed"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/inbox/{eventId}/reply-file": {
+      "post": {
+        "tags": [
+          "inbox",
+          "files"
+        ],
+        "operationId": "replyToInboxEventWithFile",
+        "x-agentforge-metering-action": "outbound_file",
+        "summary": "Reply to an inbound event with a document or photo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Reply accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/QuotaOrRateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/DeliveryFailed"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agents/{agentId}/files/{fileId}": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "operationId": "downloadAgentFile",
+        "x-agentforge-metering-action": "read_file",
+        "summary": "Download a file referenced by an inbox event",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/AgentId"
+          },
+          {
+            "$ref": "#/components/parameters/FileId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary file content",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Suggested filename disposition"
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "operationId": "listWorkspaces",
+        "x-agentforge-metering-action": "auth_account",
+        "summary": "List workspaces visible to the authenticated account",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible workspaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "AgentRelay API key or OAuth access token sent as Authorization: Bearer <token>. Free hosted usage still requires an AgentRelay account credential."
+      },
+      "OAuth2": {
+        "type": "oauth2",
+        "description": "OAuth Authorization Code + PKCE for interactive AgentRelay clients.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://relay.web-tasarimci.com/oauth/authorize",
+            "tokenUrl": "https://relay.web-tasarimci.com/oauth/token",
+            "scopes": {
+              "relay:read": "Read workspace agents, inbox and files",
+              "relay:write": "Send messages, replies and files",
+              "offline_access": "Allow rotating refresh tokens for explicit CLI login"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "WorkspaceId": {
+        "name": "workspaceId",
+        "in": "path",
+        "required": true,
+        "description": "Tenant-safe workspace identifier",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "AgentId": {
+        "name": "agentId",
+        "in": "path",
+        "required": true,
+        "description": "Agent identifier scoped to workspaceId",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "EventId": {
+        "name": "eventId",
+        "in": "path",
+        "required": true,
+        "description": "Inbound event identifier scoped to workspaceId and agentId",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "FileId": {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "description": "File identifier scoped to workspaceId and agentId",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque pagination cursor",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum items to return",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "Stable logical-delivery identity; duplicate retries must not create or bill a second delivery.",
+        "schema": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 200
+        }
+      }
+    },
+    "headers": {
+      "RequestId": {
+        "schema": {
+          "type": "string"
+        },
+        "description": "Stable request identifier for support and diagnostics"
+      },
+      "RetryAfter": {
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Seconds before retrying when applicable"
+      }
+    },
+    "schemas": {
+      "ServiceInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "service",
+          "apiVersion",
+          "meteringUnit"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "const": "agentrelay"
+          },
+          "apiVersion": {
+            "type": "string",
+            "const": "v1"
+          },
+          "meteringUnit": {
+            "type": "string",
+            "const": "relay_action"
+          },
+          "documentationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "accountUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "AgentSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "workspaceId",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "disabled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AgentListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "parseMode": {
+            "type": "string",
+            "enum": [
+              "plain",
+              "markdown"
+            ],
+            "default": "plain"
+          }
+        }
+      },
+      "SendFileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "file"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "document",
+              "photo"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        }
+      },
+      "ReplyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "parseMode": {
+            "type": "string",
+            "enum": [
+              "plain",
+              "markdown"
+            ],
+            "default": "plain"
+          }
+        }
+      },
+      "ReplyFileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "file"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "document",
+              "photo"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "format": "binary"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        }
+      },
+      "DeliveryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deliveryId",
+          "workspaceId",
+          "agentId",
+          "status",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "deliveryId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "delivered"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "default": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InboxEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "workspaceId",
+          "agentId",
+          "kind",
+          "receivedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "document",
+              "photo",
+              "other"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "file": {
+            "$ref": "#/components/schemas/FileReference"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sender": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "displayName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "externalId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "InboxListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InboxEvent"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "FileReference": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "fileId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sizeBytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "NOT_FOUND",
+              "IDEMPOTENCY_CONFLICT",
+              "QUOTA_EXCEEDED",
+              "RATE_LIMITED",
+              "PAYLOAD_TOO_LARGE",
+              "DELIVERY_FAILED",
+              "INTERNAL_ERROR"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "upgradeUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "accountUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          }
+        }
+      },
+      "WorkspaceSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkspaceListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "OAuthError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "invalid_client",
+              "invalid_grant",
+              "unauthorized_client",
+              "unsupported_grant_type",
+              "invalid_scope",
+              "access_denied",
+              "temporarily_unavailable"
+            ]
+          },
+          "error_description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_uri": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          }
+        },
+        "description": "RFC 6749/OAuth protocol error shape used by authorization/token endpoints. Hosted API resource operations use ErrorEnvelope."
+      }
+    },
+    "responses": {
+      "ServiceInfo": {
+        "description": "Hosted service info",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ServiceInfo"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "validation": {
+                "value": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Request validation failed.",
+                    "requestId": "req_123",
+                    "fieldErrors": [
+                      {
+                        "field": "text",
+                        "message": "Required."
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, invalid or expired API key/OAuth access token",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "auth": {
+                "value": {
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "Authentication required.",
+                    "requestId": "req_123"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Credential is valid but cannot access the requested workspace or agent",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Scoped resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "IdempotencyConflict": {
+        "description": "Idempotency key was reused with a different logical request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "conflict": {
+                "value": {
+                  "error": {
+                    "code": "IDEMPOTENCY_CONFLICT",
+                    "message": "Idempotency key already belongs to another request.",
+                    "requestId": "req_123"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "QuotaOrRateLimited": {
+        "description": "Hosted monthly quota exhausted or short-window rate limit reached. Inspect error.code.",
+        "headers": {
+          "Retry-After": {
+            "$ref": "#/components/headers/RetryAfter"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "quota": {
+                "value": {
+                  "error": {
+                    "code": "QUOTA_EXCEEDED",
+                    "message": "Monthly relay action quota exhausted.",
+                    "requestId": "req_123",
+                    "upgradeUrl": "https://relay.web-tasarimci.com/pricing",
+                    "accountUrl": "https://relay.web-tasarimci.com/account"
+                  }
+                }
+              },
+              "rate": {
+                "value": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Too many requests.",
+                    "requestId": "req_124",
+                    "retryAfterSeconds": 30
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Short-window request rate limit reached",
+        "headers": {
+          "Retry-After": {
+            "$ref": "#/components/headers/RetryAfter"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "Uploaded file exceeds the public service limit",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "DeliveryFailed": {
+        "description": "Provider delivery failed after service retry policy",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
+            "examples": {
+              "delivery": {
+                "value": {
+                  "error": {
+                    "code": "DELIVERY_FAILED",
+                    "message": "Telegram delivery failed.",
+                    "requestId": "req_123"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
